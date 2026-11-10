@@ -7,3 +7,21 @@
   --font-rounded: 'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
 }
+
+html, body, #root {
+  background: #f5f6f2;
+}
+
+input[aria-label]:focus {
+  outline: none;
+}
+
+[role='button']:focus-visible {
+  outline: 2px solid #245c48;
+  outline-offset: 3px;
+}
+
+::selection {
+  background: #dceba6;
+  color: #183f33;
+}

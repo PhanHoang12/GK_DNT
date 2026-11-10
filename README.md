@@ -1,56 +1,99 @@
-# Welcome to your Expo app 👋
+# UserSpace — Quản lý người dùng
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Bài giữa kỳ môn Lập trình đa nền tảng: ứng dụng quản lý người dùng ở phân hệ admin, sử dụng React Native, Expo SDK 58, TypeScript và Firebase.
 
-## Get started
+## Chức năng
 
-1. Install dependencies
+- Đăng nhập, duy trì phiên và đăng xuất quản trị viên bằng Firebase Authentication.
+- Thêm, hiển thị, sửa, xóa người dùng trong Cloud Firestore; danh sách cập nhật theo thời gian thực.
+- Kiểm tra định dạng email, email trùng và mật khẩu tối thiểu 8 ký tự. Mật khẩu người dùng được băm bằng bcrypt trước khi lưu.
+- Chọn ảnh từ thiết bị hoặc nhập URL, xem trước và hiển thị ảnh đại diện. Ảnh từ thiết bị được xử lý và lưu dạng base64.
+- Giao diện thích ứng với web và điện thoại; script riêng xuất dữ liệu JSON phục vụ nộp bài.
 
-   ```bash
-   npm install
-   ```
+## Cấu trúc dữ liệu
 
-2. Start the app
+Collection `users` chỉ có bốn trường theo đề bài:
 
-   ```bash
-   npx expo start
-   ```
+| Trường | Kiểu | Nội dung |
+| --- | --- | --- |
+| `email` | string | Địa chỉ email |
+| `matkhau` | string | Mật khẩu đã băm |
+| `hoten` | string | Họ và tên |
+| `hinhanh` | string | Ảnh base64 hoặc URL |
 
-In the output, you'll find options to open the app in a
+Document ID do Firestore cấp, không được thêm làm trường trong document. Tài khoản admin đăng nhập được quản lý riêng trong Firebase Authentication; thêm bản ghi `users` không tự tạo tài khoản Authentication.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Cài đặt và chạy
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+Yêu cầu Node.js **24.12 trở lên** để đáp ứng phiên bản Firebase trong dự án, npm và kết nối Internet.
 
 ```bash
-npm run reset-project
+git clone https://github.com/PhanHoang12/GK_DNT.git
+cd GK_DNT
+npm ci
+npm run web
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Trên Windows PowerShell, nếu `npm.ps1` bị chặn bởi Execution Policy, dùng `npm.cmd` thay cho `npm`, ví dụ `npm.cmd run web`.
 
-### Other setup steps
+Để chạy trên điện thoại, dùng Expo Go tương thích SDK 58 hoặc development build:
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm start
+```
 
-## Learn more
+Mở ứng dụng qua mã QR hiển thị trong Terminal. Có thể dùng `npm run android` hoặc `npm run ios` với môi trường mô phỏng phù hợp.
 
-To learn more about developing your project with Expo, look at the following resources:
+## Firebase
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Cấu hình kết nối nằm tại `src/config/firebase.ts`. Khi sử dụng project khác:
 
-## Join the community
+1. Đăng ký ứng dụng Web trong Firebase Console và thay cấu hình tương ứng.
+2. Bật Authentication → Sign-in method → Email/Password.
+3. Tạo tài khoản quản trị viên trong Authentication → Users.
+4. Tạo Cloud Firestore và cấu hình Security Rules để tài khoản quản trị viên có quyền truy cập collection `users`.
+5. Đăng nhập ứng dụng bằng tài khoản Authentication đã tạo.
 
-Join our community of developers creating universal apps.
+Không đưa mật khẩu đăng nhập hoặc khóa riêng service account vào mã nguồn. Cấu hình Firebase client xác định project; quyền truy cập dữ liệu được kiểm soát bằng Firebase Security Rules.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Xuất cơ sở dữ liệu để nộp bài
+
+```bash
+npm run export:db
+```
+
+Nhập tài khoản đăng nhập ứng dụng trực tiếp trong Terminal. Script chỉ đọc collection `users` từ máy chủ, tạo `database/users.json`, giữ nguyên ảnh, mật khẩu đã băm và Document ID. File đã tồn tại sẽ không bị ghi đè.
+
+```bash
+npm run export:db -- --output database/users-v2.json
+```
+
+File JSON thực tế được Git bỏ qua và cần đính kèm riêng khi nộp bài. Xem [hướng dẫn xuất dữ liệu và chụp ảnh cơ sở dữ liệu](database/README.md).
+
+## Kiểm tra và đóng gói
+
+```bash
+npx tsc --noEmit
+npm run lint
+npx expo export --platform web
+```
+
+Bản web dùng `web.output: "single"` (SPA), dựng giao diện trong trình duyệt và làm việc với Firebase qua client SDK. Thư mục `dist` chứa bản web sau khi export; lệnh này không triển khai hosting. Có thể kiểm tra đóng gói JavaScript Android bằng `npx expo export --platform android`; lệnh đó không tạo APK.
+
+Nếu Terminal giữ thông báo từ phiên chạy cũ, dừng Expo và chạy lại với cache mới:
+
+```bash
+npx expo start --web --clear
+```
+
+## Các thư mục chính
+
+```text
+src/app/                    Router và kiểm tra phiên đăng nhập
+src/components/             Giao diện và xử lý quản lý người dùng
+src/config/firebase.ts      Kết nối Firebase
+scripts/export-database.mjs Script xuất dữ liệu JSON
+database/README.md          Hướng dẫn nộp dữ liệu và ảnh minh họa
+```
+
+Các thư mục `node_modules`, `.expo`, `dist` và file dữ liệu xuất cục bộ không được đưa lên Git.

@@ -1,98 +1,105 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
-    return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
-    );
-  }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
+import { auth } from '../config/firebase';
+import AdminScreen from '../components/admin-screen';
+import LoginScreen from '../components/login-screen';
+import { Brand, palette } from '../components/admin-ui';
 
 export default function HomeScreen() {
-  return (
-    <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [error, setError] = useState("");
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
+  // Theo dõi trạng thái đăng nhập Firebase
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setCheckingAuth(false);
+    });
 
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
-    </ThemedView>
-  );
+    return unsubscribe;
+  }, []);
+
+  // Đăng nhập Admin
+  const handleLogin = async () => {
+    setError("");
+
+    if (!email.trim() || !password) {
+      setError("Vui lòng nhập đầy đủ email và mật khẩu.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await signInWithEmailAndPassword(
+        auth,
+        email.trim(),
+        password
+      );
+
+      setPassword("");
+    } catch (err: any) {
+      console.log("Login error:", err.code);
+
+      switch (err.code) {
+        case "auth/invalid-email":
+          setError("Địa chỉ email không hợp lệ.");
+          break;
+
+        case "auth/too-many-requests":
+          setError("Thử quá nhiều lần. Vui lòng thử lại sau.");
+          break;
+
+        case "auth/network-request-failed":
+          setError("Không thể kết nối mạng.");
+          break;
+
+        default:
+          setError("Email hoặc mật khẩu không chính xác.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Đăng xuất Admin
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setPassword("");
+      setError("");
+    } catch {
+      Alert.alert("Lỗi", "Không thể đăng xuất.");
+    }
+  };
+
+
+  if (checkingAuth) {
+    return (
+      <View style={styles.loading}>
+        <Brand />
+        <ActivityIndicator size="small" color={palette.green} style={styles.spinner} />
+        <Text style={styles.loadingText}>Đang kiểm tra phiên đăng nhập…</Text>
+      </View>
+    );
+  }
+
+  if (user) {
+    return <AdminScreen email={user.email ?? 'Admin'} onLogout={handleLogout} />;
+  }
+
+  return <LoginScreen email={email} password={password} loading={loading} error={error}
+    onEmailChange={setEmail} onPasswordChange={setPassword} onLogin={handleLogin} />;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
-  },
+  loading: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: palette.background },
+  spinner: { marginTop: 32 },
+  loadingText: { color: palette.muted, fontSize: 12, marginTop: 14 },
 });
